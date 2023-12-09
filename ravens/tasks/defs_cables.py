@@ -446,7 +446,7 @@ class CableShape(CableEnv):
     square; the square_pose is just used for a pose and sampling bounds.
     """
 
-    def __init__(self):
+    def __init__(self, nb_cable_parts=24, cable_radius=0.005):
         super().__init__()
         self.ee = 'suction'
         self.max_steps = 21
@@ -459,10 +459,11 @@ class CableShape(CableEnv):
         self.target_zone_visible = True
         self.target_debug_markers = False
 
-        # Cable parameters. For this I think we want more than 20.
-        self.num_parts = 24
-        self.radius = 0.005
-        self.length = 2 * self.radius * self.num_parts * np.sqrt(2)
+        # Cable parameters.
+        #if self.num_parts < :
+        self.num_parts = 30 # Number of cable parts
+        self.radius = 0.005 # Radius of each cable part
+        self.length = 2 * self.radius * self.num_parts # Total cable length
         self.num_sides_low = 2
         self.num_sides_high = 4
 
