@@ -40,12 +40,13 @@ import sys
 import cv2
 import pickle
 import numpy as np
+import pybullet as p
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from ravens import Dataset, Environment, agents, tasks
 
 # Of critical importance! Do 2 for max of 100 demos, 3 for max of 1000 demos.
-MAX_ORDER = 3
+MAX_ORDER = 2
 
 
 def rollout(agent, env, tasks, args):
@@ -227,7 +228,7 @@ if __name__ == '__main__':
 
     # Initialize task. Later, initialize Environment if necessary.
     task = tasks.names[args.task]()
-    dataset = Dataset(os.path.join('data', args.task))
+    dataset = Dataset(os.path.join('Dataset5', args.task))
     if args.subsamp_g:
         dataset.subsample_goals = True
 
@@ -243,11 +244,17 @@ if __name__ == '__main__':
     if make_new_env:
         env = Environment(args.disp, hz=args.hz)
 
+    f = open('res5.txt', 'w')
     # For some tasks, call reset() again with a new seed if init state is 'done'.
     while dataset.num_episodes < max_demos:
         seed = dataset.num_episodes + seed_to_add
         print(f'\nNEW DEMO: {dataset.num_episodes+1}/{max_demos}, seed {seed}\n')
         np.random.seed(seed)
+        if env.ee != None:
+            robot_position = p.getLinkState(env.ee.body, 0)[0][:-1]
+        else:
+            robot_position = [0.0, 0.0]
+        env.robot_position = robot_position
         demo_reward, episode, t, last_obs_info = rollout(task.oracle(env), env, task, args)
         last_extras = last_obs_info[1]['extras']
 
@@ -258,6 +265,7 @@ if __name__ == '__main__':
         else:
             dataset.add(episode, last_obs_info)
             print(f'\ndemo reward: {demo_reward:0.5f}, len {t}, last_i: {last_extras}')
+            f.write(f'{last_extras}\n')
 
     if make_new_env:
         env.stop()
