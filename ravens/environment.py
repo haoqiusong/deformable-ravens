@@ -17,7 +17,7 @@ from ravens import tasks, utils
 
 class Environment():
 
-    def __init__(self, disp=False, hz=240):
+    def __init__(self, disp=False, hz=240, robot_position=None):
         """Creates OpenAI gym-style env with support for PyBullet threading.
 
         Args:
@@ -49,6 +49,8 @@ class Environment():
         # From Xuchen: need this for using any new deformable simulation.
         self.use_new_deformable = True
         self.hz = hz
+
+        self.robot_position = None
 
         # Start PyBullet.
         p.connect(p.GUI if disp else p.DIRECT)
@@ -296,7 +298,7 @@ class Environment():
             time.sleep(0.001)
 
         # Compute task rewards.
-        reward, reward_extras = self.task.reward()
+        reward, reward_extras = self.task.reward(self.robot_position)
         done = self.task.done()
 
         # Pass ground truth robot state as info.
