@@ -7,6 +7,7 @@ import random
 import collections
 
 import cv2
+import math
 import numpy as np
 import pybullet as p
 import matplotlib.pyplot as plt
@@ -723,7 +724,7 @@ class Task():
     # Reward Function and Task Completion Metrics
     #-------------------------------------------------------------------------
 
-    def reward(self):
+    def reward(self, robot_position = None):
         """Compute reward for current timestep.
 
         Default Ravens assumes "delta rewards" that start at 0, and only
@@ -857,7 +858,12 @@ class Task():
             # ---------------------------------------------------------------- #
             total_rewards = 0
             dist_threshold = self.radius * 3.5 # Try this? 2*radius is too strict.
+            #dist_threshold = self.radius * 2
             zone_points = 0
+            
+            rx, ry = robot_position
+            flag = True
+            
             for bead_id in self.cable_bead_IDs:
                 bead_position = p.getBasePositionAndOrientation(bead_id)[0]
                 min_d = np.float('inf')
@@ -868,9 +874,33 @@ class Task():
                     dist = np.linalg.norm(bead_xy - target_xy)
                     if dist < min_d:
                         min_d = dist
+
+                    if ((bead_xy[1] - ry) * (bead_xy[0] - rx)) * ((target_xy[1] - ry) * (target_xy[0] - rx)) <= 0:
+                        flag = False
                 if min_d < dist_threshold:
                     zone_points += 1
-            total_rewards = zone_points / len(self.cable_bead_IDs)
+            minx, maxx = float('inf'), float('-inf')
+            miny, maxy = float('inf'), float('-inf')
+            for i in range(len(bead_xy)):
+                minx = min(minx, bead_xy[0])
+                maxx = max(maxx, bead_xy[0])
+                miny = min(miny, bead_xy[1])
+                maxy = max(maxy, bead_xy[1])
+            cable_length = math.sqrt((maxx - minx) ** 2 + (maxy - miny) ** 2)
+
+            minx, maxx = float('inf'), float('-inf')
+            miny, maxy = float('inf'), float('-inf')
+            for i in range(len(target_xy)):
+                minx = min(minx, target_xy[0])
+                maxx = max(maxx, target_xy[0])
+                miny = min(miny, target_xy[1])
+                maxy = max(maxy, target_xy[1])
+            target_length = math.sqrt((maxx - minx) ** 2 + (maxy - miny) ** 2)
+            
+            if cable_length < target_length // 10 or not flag:
+                total_rewards = 0
+            else:
+                total_rewards = zone_points / len(self.cable_bead_IDs)
             reward = total_rewards - self.total_rewards
             self.total_rewards = total_rewards
 
@@ -1137,7 +1167,8 @@ class Task():
         if self.metric == 'zone':
             zone_done = self.total_rewards == 1
         elif self.metric == 'cable-target':
-            cable_done = self.total_rewards == 1
+            #cable_done = self.total_rewards == 1
+            cable_done = self.total_rewards >= 0.9
         elif self.metric == 'cable-ring':
             fraction = self.total_rewards / self.circle_area
             if fraction >= self.area_thresh:
